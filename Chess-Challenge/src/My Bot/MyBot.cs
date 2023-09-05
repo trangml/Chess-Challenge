@@ -1,4 +1,5 @@
 ﻿using ChessChallenge.API;
+using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,32 +9,53 @@ public class NeuralNetwork
     private int inputSize = 64;
     private int hiddenSize = 64;
     private int outputSize = 1;
-    private double[,] weightsInputHidden;
-    private double[,] weightsHiddenOutput;
-    private double[] biasHidden;
-    private double[] biasOutput;
+    private double[,] weightsInputHidden = new double[64, 64];
+    private double[,] weightsHiddenOutput = new double[64, 1];
+    private double[] biasHidden = {
+            0.0093,  0.7201, -0.4888, -1.1677, -0.0787,  0.5538, -0.7047, -0.4611,
+            -0.3950, -0.2783,  0.5403, -1.4371,  0.6107,  0.2568, -0.1416,  0.6025,
+            -1.1769,  0.0499,  0.2756, -1.6897,  0.3364,  0.2278, -1.6972, -0.6835,
+            -0.3352, -1.0475,  0.9970, -1.6108, -1.5375, -0.4456, -0.1539,  0.3226,
+            0.7910, -1.5217, -0.4274, -1.3362, -1.3930, -1.1615,  0.2305,  0.4338,
+            0.1061, -0.1012,  0.4722, -0.1777, -1.5194, -1.4983,  0.0321, -1.7931,
+            0.8874, -0.4629,  0.3259,  0.4465,  0.3047,  0.9525,  0.8024,  1.0381,
+            0.1891, -1.3641,  0.3612,  0.8040, -0.9125, -0.4735, -0.2301,  0.7228};
+    private double[] biasOutput = { -0.1160 };
 
     public NeuralNetwork()
     {
         // Initialize weights and biases with random values
-        weightsInputHidden = new double[inputSize, hiddenSize];
-        weightsHiddenOutput = new double[hiddenSize, outputSize];
-        biasHidden = new double[] {
-            0.2981, -0.2535,  0.2771,  0.2300,  0.2028,  0.2985,  0.2444,  0.5654,
-            -0.2777,  0.2984,  0.3115,  0.2199,  0.1980,  0.1995,  0.2738,  0.2300,
-            0.1942,  0.1575,  0.2979,  0.2617,  0.2117,  0.1617,  0.1926,  0.2007,
-            0.5081,  0.3370,  0.3412,  0.3197,  0.3914,  0.3916,  0.3435,  0.3391,
-            0.3439,  0.3429,  0.2739,  0.2295,  0.3802,  0.3430,  0.3672,  0.0864,
-            0.2769,  0.2971,  0.3434,  0.1902,  0.2634,  0.2990,  0.1442,  0.2593,
-            0.3430,  0.2753,  0.3429,  0.2453,  0.1929,  0.2990,  0.2155,  0.3210,
-            0.2914,  0.2405,  0.3446,  0.3702,  0.1718,  0.3544,  0.1748,  0.1808 };
-        biasOutput = new double[] { -0.0297 };
         RandomizeWeightsAndBiases();
+        // Console.WriteLine("Neural network initialized");
+        // // Create or overwrite the file and write the array contents to it
+        // string filePath = "weightsFC2.txt";
+        // using (StreamWriter writer = new StreamWriter(filePath))
+        // {
+        //     int rows = weightsHiddenOutput.GetLength(0);
+        //     int columns = weightsHiddenOutput.GetLength(1);
+
+        //     // writer.Write("[");
+        //     for (int i = 0; i < rows; i++)
+        //     {
+        //         // writer.Write("[");
+        //         for (int j = 0; j < columns; j++)
+        //         {
+        //             writer.Write(weightsHiddenOutput[i, j]);
+
+        //             if (j < columns - 1)
+        //             {
+        //                 writer.Write(",");
+        //             }
+        //         }
+
+        //         // Add a new line to separate rows
+        //         // writer.Write("]");
+        //         writer.WriteLine();
+        //     }
+        //     // writer.Write("]");
+        // }
     }
-    public double ReLU(double x)
-    {
-        return Math.Max(0, x);
-    }
+    public double ReLU(double x) => Math.Max(0, x);
     private void RandomizeWeightsAndBiases()
     {
         var random = new Random(0); // Use a fixed seed for reproducibility
@@ -57,11 +79,6 @@ public class NeuralNetwork
 
     public double FeedForward(double[] input)
     {
-        if (input.Length != inputSize)
-        {
-            throw new ArgumentException("Input size does not match the network's input size.");
-        }
-
         // Calculate hidden layer output
         var hiddenLayer = new double[hiddenSize];
         for (int i = 0; i < hiddenSize; i++)
@@ -104,9 +121,7 @@ public class MyBot : IChessBot
             {
                 board.MakeMove(move); // Make the move
                 if (board.IsInCheckmate())
-                {
                     return move;
-                }
                 double score = -AlphaBeta(board, currentDepth - 1, -beta, -alpha);
                 board.UndoMove(move); // Undo the move
 
@@ -119,17 +134,13 @@ public class MyBot : IChessBot
                 alpha = Math.Max(alpha, bestScore);
 
                 if (alpha >= beta)
-                {
                     break; // Beta cutoff
-                }
             }
 
             // Check if time is running out and decide whether to continue searching
             double elapsedTime = timer.MillisecondsElapsedThisTurn / 1000.0;
             if (startTime + elapsedTime >= maxTime)
-            {
                 break;
-            }
         }
         // Return the best move found
         return bestMove;
@@ -138,9 +149,7 @@ public class MyBot : IChessBot
     public double AlphaBeta(Board board, int depth, double alpha, double beta)
     {
         if (depth == 0 || board.IsDraw() || board.IsInCheckmate())
-        {
             return Evaluate(board);
-        }
         Move[] legalMoves = board.GetLegalMoves();
         Array.Sort(legalMoves, (a, b) => a.IsCapture.CompareTo(b.IsCapture) + a.IsPromotion.CompareTo(b.IsPromotion) + a.IsPromotion.CompareTo(b.IsPromotion));
         foreach (Move move in legalMoves)
@@ -152,22 +161,14 @@ public class MyBot : IChessBot
             alpha = Math.Max(alpha, score);
 
             if (alpha >= beta)
-            {
                 break; // Beta cutoff
-            }
         }
 
         return alpha;
     }
     public static double[] FenToBoardVector(string fen)
     {
-        Console.WriteLine(fen);
         string[] piecePlacement = fen.Split(' ')[0].Split('/');
-        // string activeColor = parts[1];
-        // string castlingRights = parts[2];
-        // string enPassant = parts[3];
-        // int halfmoveClock = int.Parse(parts[4]);
-        // int fullmoveClock = int.Parse(parts[5]);
 
         double[] boardVector = new double[64];
 
